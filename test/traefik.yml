@@ -1,0 +1,36 @@
+providers:
+  docker:
+    exposedbydefault: false
+    network: traefik
+  file:
+    directory: "/"
+
+experimental:
+    localPlugins:
+        rewriteHeaders:
+            moduleName: "github.com/virtualzone/rewriteheaders"
+
+serversTransport:
+  insecureSkipVerify: true
+
+api:
+  insecure: true
+
+entryPoints:
+  traefik:
+    address: ":8090"
+  web:
+    address: ":80"
+
+http:
+  middlewares:
+    strip-secure-cookie:
+      plugin:
+        rewriteHeaders:
+          rewrites:
+            - header: Set-Cookie
+              regex: '^(.+); Secure(.*)$'
+              replacement: '$1$2'
+
+log:
+  level: DEBUG

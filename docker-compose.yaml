@@ -1,0 +1,26 @@
+version: '3.3'
+services:
+  traefik:
+    image: traefik
+    restart: always
+    networks:
+      traefik:
+    ports:
+      - 8080:80
+      - 8090:8090
+    volumes:
+      - ./test/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./:/plugins-local/src/github.com/virtualzone/rewriteheaders:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+  testserver:
+    build: ./test
+    restart: always
+    networks:
+      traefik:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.unifi.rule=Host(`localhost`)"
+      - "traefik.http.routers.unifi.entrypoints=web"
+      - "traefik.http.routers.unifi.middlewares=strip-secure-cookie@file"
+networks:
+  traefik:
