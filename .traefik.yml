@@ -1,0 +1,11 @@
+displayName: Rewrite HTTP Response Headers for Traefik
+type: middleware
+import: github.com/virtualzone/rewriteheaders
+
+summary: Rewrites the HTTP response headers using regular expressions (RegExp).
+
+testData:
+  rewrites:
+    - header: Location
+      regex: "^http://(.+)$"
+      replacement: "https://$1"
