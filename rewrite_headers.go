@@ -19,6 +19,11 @@ type Config struct {
 	Rewrites []Rewrite `json:"rewrites,omitempty"`
 }
 
+type ResponseWriter struct {
+	Writer   http.ResponseWriter
+	Rewrites []rewrite
+}
+
 // CreateConfig creates and initializes the plugin configuration.
 func CreateConfig() *Config {
 	return &Config{}
@@ -59,22 +64,36 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 }
 
 func (r *rewriteHeader) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	wrappedWriter := &ResponseWriter{
+		Writer:   rw,
+		Rewrites: r.rewrites,
+	}
+	r.next.ServeHTTP(wrappedWriter, req)
+}
 
-	r.next.ServeHTTP(rw, req)
+func (r *ResponseWriter) Header() http.Header {
+	return r.Writer.Header()
+}
 
-	for _, rewrite := range r.rewrites {
-		headers := rw.Header().Values(rewrite.header)
+func (r *ResponseWriter) Write(bytes []byte) (int, error) {
+	return r.Writer.Write(bytes)
+}
 
-		if len(headers) == 0 {
+func (r *ResponseWriter) WriteHeader(statusCode int) {
+	for _, rewrite := range r.Rewrites {
+		headerValues := r.Writer.Header().Values(rewrite.header)
+
+		if len(headerValues) == 0 {
 			continue
 		}
 
-		rw.Header().Del(rewrite.header)
+		r.Writer.Header().Del(rewrite.header)
 
-		for _, header := range headers {
+		for _, header := range headerValues {
 			value := rewrite.regex.ReplaceAll([]byte(header), rewrite.replacement)
-			rw.Header().Add(rewrite.header, string(value))
+			r.Writer.Header().Add(rewrite.header, string(value))
 		}
-
 	}
+
+	r.Writer.WriteHeader(statusCode)
 }
